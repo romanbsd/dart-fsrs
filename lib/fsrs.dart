@@ -12,31 +12,33 @@ import 'dart:math' as math;
 
 import 'package:meta/meta.dart';
 
+/// ts-fsrs 5.4.2 `default_w` (FSRS-6); the previous value was the FSRS-5.1 set.
 const defaultParameters = [
-  0.2172,
-  1.1771,
-  3.2602,
-  16.1507,
-  7.0114,
-  0.57,
-  2.0966,
-  0.0069,
-  1.5261,
-  0.112,
-  1.0178,
-  1.849,
-  0.1133,
-  0.3127,
-  2.2934,
-  0.2191,
-  3.0004,
-  0.7536,
-  0.3332,
-  0.1437,
-  0.2,
+  0.212,
+  1.2931,
+  2.3065,
+  8.2956,
+  6.4133,
+  0.8334,
+  3.0194,
+  0.001,
+  1.8722,
+  0.1666,
+  0.796,
+  1.4835,
+  0.0614,
+  0.2629,
+  1.6483,
+  0.6014,
+  1.8729,
+  0.5425,
+  0.0912,
+  0.0658,
+  0.1542,
 ];
 
 const stabilityMin = 0.001;
+const stabilityMax = 36500.0;
 const lowerBoundsParameters = [
   stabilityMin,
   stabilityMin,
@@ -57,7 +59,7 @@ const lowerBoundsParameters = [
   1.0,
   0.0,
   0.0,
-  0.0,
+  0.01,
   0.1,
 ];
 
@@ -111,6 +113,8 @@ const fuzzRanges = [
 /// Enum representing the learning state of a Card object.
 /// {@endtemplate}
 enum State {
+  /// Unseen card — matches ts-fsrs `State.New` (value 0).
+  newCard(0),
   learning(1),
   review(2),
   relearning(3);
@@ -121,6 +125,8 @@ enum State {
   /// {@macro fsrs.state}
   static State fromValue(int value) {
     switch (value) {
+      case 0:
+        return State.newCard;
       case 1:
         return State.learning;
       case 2:
@@ -191,6 +197,20 @@ class Card {
   /// The date and time of the card's last review.
   DateTime? lastReview;
 
+  /// Number of times the card has been reviewed (ts-fsrs `reps`).
+  int reps;
+
+  /// Number of times the card has lapsed (Again while in Review).
+  int lapses;
+
+  /// Whole days elapsed since the previous review at the last transition
+  /// (ts-fsrs `elapsed_days`).
+  int elapsedDays;
+
+  /// Whole days in the interval scheduled by the last transition
+  /// (ts-fsrs `scheduled_days`). Sub-day learning intervals are `0`.
+  int scheduledDays;
+
   /// {@macro fsrs.card}
   Card({
     required this.cardId,
@@ -200,6 +220,10 @@ class Card {
     this.difficulty,
     DateTime? due,
     this.lastReview,
+    this.reps = 0,
+    this.lapses = 0,
+    this.elapsedDays = 0,
+    this.scheduledDays = 0,
   }) : due = due ?? DateTime.now().toUtc() {
     if (state == State.learning && step == null) {
       step = 0;
@@ -218,6 +242,10 @@ class Card {
     double? difficulty,
     DateTime? due,
     DateTime? lastReview,
+    int reps = 0,
+    int lapses = 0,
+    int elapsedDays = 0,
+    int scheduledDays = 0,
   }) async {
     // epoch milliseconds of when the card was created
     final cardId = DateTime.now().millisecondsSinceEpoch;
@@ -233,6 +261,10 @@ class Card {
       difficulty: difficulty,
       due: due,
       lastReview: lastReview,
+      reps: reps,
+      lapses: lapses,
+      elapsedDays: elapsedDays,
+      scheduledDays: scheduledDays,
     );
   }
 
@@ -245,7 +277,11 @@ class Card {
         'stability: $stability, '
         'difficulty: $difficulty, '
         'due: $due, '
-        'lastReview: $lastReview)';
+        'lastReview: $lastReview, '
+        'reps: $reps, '
+        'lapses: $lapses, '
+        'elapsedDays: $elapsedDays, '
+        'scheduledDays: $scheduledDays)';
   }
 
   @override
@@ -258,13 +294,17 @@ class Card {
         other.stability == stability &&
         other.difficulty == difficulty &&
         other.due == due &&
-        other.lastReview == lastReview;
+        other.lastReview == lastReview &&
+        other.reps == reps &&
+        other.lapses == lapses &&
+        other.elapsedDays == elapsedDays &&
+        other.scheduledDays == scheduledDays;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-        cardId, state, step, stability, difficulty, due, lastReview);
+    return Object.hash(cardId, state, step, stability, difficulty, due,
+        lastReview, reps, lapses, elapsedDays, scheduledDays);
   }
 
   /// Returns a JSON-serializable Map representation of the Card object.
@@ -279,6 +319,10 @@ class Card {
       'difficulty': difficulty,
       'due': due.toIso8601String(),
       'lastReview': lastReview?.toIso8601String(),
+      'reps': reps,
+      'lapses': lapses,
+      'elapsedDays': elapsedDays,
+      'scheduledDays': scheduledDays,
     };
   }
 
@@ -296,6 +340,10 @@ class Card {
       lastReview: sourceMap['lastReview'] != null
           ? DateTime.parse(sourceMap['lastReview'] as String)
           : null,
+      reps: (sourceMap['reps'] as num?)?.toInt() ?? 0,
+      lapses: (sourceMap['lapses'] as num?)?.toInt() ?? 0,
+      elapsedDays: (sourceMap['elapsedDays'] as num?)?.toInt() ?? 0,
+      scheduledDays: (sourceMap['scheduledDays'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -310,6 +358,10 @@ class Card {
     double? difficulty,
     DateTime? due,
     DateTime? lastReview,
+    int? reps,
+    int? lapses,
+    int? elapsedDays,
+    int? scheduledDays,
   }) {
     return Card(
       cardId: cardId ?? this.cardId,
@@ -319,6 +371,10 @@ class Card {
       difficulty: difficulty ?? this.difficulty,
       due: due ?? this.due,
       lastReview: lastReview ?? this.lastReview,
+      reps: reps ?? this.reps,
+      lapses: lapses ?? this.lapses,
+      elapsedDays: elapsedDays ?? this.elapsedDays,
+      scheduledDays: scheduledDays ?? this.scheduledDays,
     );
   }
 }
@@ -422,8 +478,14 @@ class Scheduler {
 
   late final double _decay;
   late final double _factor;
+  late final double _intervalModifier;
 
-  late math.Random _fuzzRandom;
+  /// Set by [Scheduler.customRandom]; when null, fuzzing uses the ts-fsrs
+  /// `alea` PRNG seeded with [_fuzzSeed] (captured in [reviewCard]).
+  math.Random? _fuzzRandom;
+
+  /// ts-fsrs `DefaultInitSeedStrategy` seed for the current review.
+  String? _fuzzSeed;
 
   /// {@macro fsrs.scheduler}
   Scheduler({
@@ -437,14 +499,17 @@ class Scheduler {
       Duration(minutes: 10),
     ],
     this.maximumInterval = 36500,
-    this.enableFuzzing = true,
+    // ts-fsrs `default_enable_fuzz` is false.
+    this.enableFuzzing = false,
   }) : parameters = List<double>.from(parameters) {
     _validateParameters(this.parameters);
 
     _decay = -this.parameters[20];
-    _factor = math.pow(0.9, 1 / _decay) - 1;
-
-    _fuzzRandom = math.Random();
+    _factor = _roundTo8((math.pow(0.9, 1 / _decay) - 1).toDouble());
+    // ts-fsrs `calculate_interval_modifier()`:
+    // roundTo((requestRetention^(1/decay) - 1) / factor, 8).
+    _intervalModifier = _roundTo8(
+        ((math.pow(desiredRetention, 1 / _decay) - 1) / _factor).toDouble());
   }
 
   /// {@macro fsrs.scheduler}
@@ -465,7 +530,7 @@ class Scheduler {
       Duration(minutes: 10),
     ],
     int maximumInterval = 36500,
-    bool enableFuzzing = true,
+    bool enableFuzzing = false,
   }) {
     final scheduler = Scheduler(
       parameters: parameters,
@@ -482,9 +547,13 @@ class Scheduler {
   }
 
   void _validateParameters(List<double> parameters) {
-    if (parameters.length != lowerBoundsParameters.length) {
+    // ts-fsrs `checkParameters()` only accepts the FSRSv4 (17), FSRSv5 (19)
+    // and FSRSv6 (21) weight counts, migrating the shorter ones.
+    if (parameters.length == 17 || parameters.length == 19) {
+      _migrateParameters(parameters);
+    } else if (parameters.length != lowerBoundsParameters.length) {
       throw ArgumentError(
-          'Expected ${lowerBoundsParameters.length} parameters, got ${parameters.length}.');
+          'Expected 17, 19 or 21 parameters, got ${parameters.length}.');
     }
 
     final errorMessages = <String>[];
@@ -503,6 +572,32 @@ class Scheduler {
     if (errorMessages.isNotEmpty) {
       throw ArgumentError('One or more parameters are out of bounds:\n'
           '${errorMessages.join('\n')}');
+    }
+  }
+
+  /// Migrates FSRSv4 (17) / FSRSv5 (19) weights to FSRSv6 (21), matching
+  /// ts-fsrs `migrateParameters()`.
+  void _migrateParameters(List<double> parameters) {
+    if (parameters.length == 19) {
+      parameters.add(0.0); // w[19]
+      parameters.add(0.5); // w[20] = FSRS-5 decay
+    } else if (parameters.length == 17) {
+      // FSRSv4 → FSRSv6 conversions, applied in ts-fsrs order.
+      parameters[4] = _roundTo8(parameters[5] * 2.0 + parameters[4]);
+      parameters[5] = _roundTo8(math.log(parameters[5] * 3.0 + 1.0) / 3.0);
+      parameters[6] = _roundTo8(parameters[6] + 0.5);
+      parameters.add(0.0);
+      parameters.add(0.0);
+      parameters.add(0.0);
+      parameters.add(0.5); // w[20] = FSRS-5 decay
+    }
+
+    // ts-fsrs `clipParameters()` clamps migrated weights into bounds, so the
+    // appended/derived values (e.g. w[19]=0.0 vs lower bound 0.01) don't fail
+    // the range check below. Only runs on the migration path.
+    for (int i = 0; i < parameters.length; i++) {
+      parameters[i] = parameters[i]
+          .clamp(lowerBoundsParameters[i], upperBoundsParameters[i]);
     }
   }
 
@@ -552,17 +647,21 @@ class Scheduler {
   /// Returns:
   ///   - The retrievability of the Card object.
   double getCardRetrievability(Card card, {DateTime? currentDateTime}) {
+    if (currentDateTime != null && !currentDateTime.isUtc) {
+      throw ArgumentError('datetime must be in UTC');
+    }
+
     if (card.lastReview == null) {
       return 0;
     }
 
     currentDateTime ??= DateTime.now().toUtc();
     final elapsedDays =
-        math.max(0, currentDateTime.difference(card.lastReview!).inDays);
+        math.max(0, _daysBetween(card.lastReview!, currentDateTime));
 
-    return math
+    return _roundTo8(math
         .pow(1 + _factor * elapsedDays / card.stability!, _decay)
-        .toDouble();
+        .toDouble());
   }
 
   /// Reviews a card with a given rating at a given time for a specified duration.
@@ -592,18 +691,34 @@ class Scheduler {
 
     reviewDateTime ??= DateTime.now().toUtc();
 
+    // ts-fsrs `DefaultInitSeedStrategy` seed, captured before the card is
+    // mutated: `${review_time}_${reps}_${difficulty * stability}`.
+    _fuzzSeed = '${reviewDateTime.millisecondsSinceEpoch}_${card.reps + 1}_'
+        '${_jsNumberString((card.difficulty ?? double.nan) * (card.stability ?? double.nan))}';
+
     final daysSinceLastReview = card.lastReview != null
-        ? reviewDateTime.difference(card.lastReview!).inDays
+        ? _daysBetween(card.lastReview!, reviewDateTime)
         : null;
+
+    final wasReview = card.state == State.review;
+
+    // ts-fsrs State.New (0): first review enters the learning path.
+    if (card.state == State.newCard) {
+      card.state = State.learning;
+      card.step ??= 0;
+    }
 
     Duration nextInterval;
 
     switch (card.state) {
+      case State.newCard:
+        // Unreachable: newCard is converted to learning above.
+        throw StateError('newCard must be converted before scheduling');
       case State.learning:
         // update the card's stability and difficulty
         if (card.stability == null && card.difficulty == null) {
           card.stability = _initialStability(rating);
-          card.difficulty = _initialDifficulty(rating);
+          card.difficulty = _clampDifficulty(_initialDifficulty(rating));
         } else if (daysSinceLastReview != null && daysSinceLastReview < 1) {
           card.stability = _shortTermStability(
             stability: card.stability!,
@@ -628,15 +743,18 @@ class Scheduler {
         }
 
         // calculate the card's next interval
-        // first if-clause handles edge case where the Card in the Learning state was previously
-        // scheduled with a Scheduler with more learningSteps than the current Scheduler
-        if (learningSteps.isEmpty ||
-            (card.step! >= learningSteps.length &&
-                [Rating.hard, Rating.good, Rating.easy].contains(rating))) {
+        // ts-fsrs `BasicLearningStepsStrategy` returns {} (graduating the card
+        // to Review for any grade) when there are no steps or the current step
+        // is exhausted — this also covers cards previously scheduled with a
+        // Scheduler with more learningSteps than the current one.
+        if (learningSteps.isEmpty || card.step! >= learningSteps.length) {
           card.state = State.review;
           card.step = null;
 
-          final nextIntervalDays = _nextInterval(stability: card.stability!);
+          final nextIntervalDays = _getFuzzedInterval(
+            _nextInterval(stability: card.stability!),
+            daysSinceLastReview ?? 0,
+          );
           nextInterval = Duration(days: nextIntervalDays);
         } else {
           switch (rating) {
@@ -645,15 +763,8 @@ class Scheduler {
               nextInterval = learningSteps[card.step!];
 
             case Rating.hard:
-              // card step stays the same
-
-              if (card.step == 0 && learningSteps.length == 1) {
-                nextInterval = learningSteps[0] * 1.5;
-              } else if (card.step == 0 && learningSteps.length >= 2) {
-                nextInterval = (learningSteps[0] + learningSteps[1]) ~/ 2;
-              } else {
-                nextInterval = learningSteps[card.step!];
-              }
+              // Independent of the current step (see _hardStepInterval).
+              nextInterval = _hardStepInterval(learningSteps);
 
             case Rating.good:
               if (card.step! + 1 == learningSteps.length) {
@@ -661,8 +772,10 @@ class Scheduler {
                 card.state = State.review;
                 card.step = null;
 
-                final nextIntervalDays =
-                    _nextInterval(stability: card.stability!);
+                final nextIntervalDays = _getFuzzedInterval(
+                  _nextInterval(stability: card.stability!),
+                  daysSinceLastReview ?? 0,
+                );
                 nextInterval = Duration(days: nextIntervalDays);
               } else {
                 card.step = card.step! + 1;
@@ -674,8 +787,10 @@ class Scheduler {
               card.state = State.review;
               card.step = null;
 
-              final nextIntervalDays =
-                  _nextInterval(stability: card.stability!);
+              final nextIntervalDays = _getFuzzedInterval(
+                _nextInterval(stability: card.stability!),
+                daysSinceLastReview ?? 0,
+              );
               nextInterval = Duration(days: nextIntervalDays);
               break;
           }
@@ -683,34 +798,54 @@ class Scheduler {
         break;
 
       case State.review:
-        // update the card's stability and difficulty
-        if (daysSinceLastReview != null && daysSinceLastReview < 1) {
-          card.stability = _shortTermStability(
-            stability: card.stability!,
-            rating: rating,
-          );
-        } else {
-          card.stability = _nextStability(
-            difficulty: card.difficulty!,
-            stability: card.stability!,
-            retrievability:
-                getCardRetrievability(card, currentDateTime: reviewDateTime),
-            rating: rating,
-          );
-        }
+        // ts-fsrs `BasicScheduler.reviewState()` computes stability for every
+        // grade with a shared retrievability, then interlocks the fuzzed
+        // intervals: hard = min(I_hard, I_good), good = max(I_good, hard + 1),
+        // easy = max(I_easy, good + 1).
+        final shortTerm = daysSinceLastReview != null && daysSinceLastReview < 1;
+        // Capture the pre-review stability/difficulty: every grade's stability
+        // derives from these, so they must not see the mutations below.
+        final baseStability = card.stability!;
+        final baseDifficulty = card.difficulty!;
+        // Retrievability is the same for every grade; compute it once instead
+        // of once per stabilityFor call.
+        final retrievability = shortTerm
+            ? double.nan
+            : getCardRetrievability(card, currentDateTime: reviewDateTime);
+        // Memoize per grade: only the grades a branch actually needs are
+        // computed, and each at most once.
+        final stabilityCache = <Rating, double>{};
+        double stabilityFor(Rating r) => stabilityCache.putIfAbsent(
+              r,
+              () => shortTerm
+                  ? _shortTermStability(stability: baseStability, rating: r)
+                  : _nextStability(
+                      difficulty: baseDifficulty,
+                      stability: baseStability,
+                      retrievability: retrievability,
+                      rating: r,
+                    ),
+            );
+
+        final elapsedDays = daysSinceLastReview ?? 0;
+
+        card.stability = stabilityFor(rating);
 
         card.difficulty = _nextDifficulty(
           difficulty: card.difficulty!,
           rating: rating,
         );
 
-        // calculate the card's next interval
+        // calculate the card's next interval (fuzz included)
         switch (rating) {
           case Rating.again:
-            // if there are no relearning steps (they were left blank)
+            // if there are no relearning steps (they were left blank) the
+            // card stays in the Review state
             if (relearningSteps.isEmpty) {
-              final nextIntervalDays =
-                  _nextInterval(stability: card.stability!);
+              final nextIntervalDays = _getFuzzedInterval(
+                _nextInterval(stability: stabilityFor(Rating.again)),
+                elapsedDays,
+              );
               nextInterval = Duration(days: nextIntervalDays);
             } else {
               card.state = State.relearning;
@@ -718,12 +853,59 @@ class Scheduler {
               nextInterval = relearningSteps[card.step!];
             }
 
-          case Rating.hard || Rating.good || Rating.easy:
-            final nextIntervalDays = _nextInterval(stability: card.stability!);
-            nextInterval = Duration(days: nextIntervalDays);
+          case Rating.hard:
+            final hardInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.hard)),
+              elapsedDays,
+            );
+            final goodInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.good)),
+              elapsedDays,
+            );
+            nextInterval = Duration(days: math.min(hardInterval, goodInterval));
+
+          case Rating.good:
+            final hardInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.hard)),
+              elapsedDays,
+            );
+            final goodInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.good)),
+              elapsedDays,
+            );
+            nextInterval = Duration(
+              days: math.max(
+                goodInterval,
+                math.min(hardInterval, goodInterval) + 1,
+              ),
+            );
+
+          case Rating.easy:
+            final hardInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.hard)),
+              elapsedDays,
+            );
+            final goodInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.good)),
+              elapsedDays,
+            );
+            final easyInterval = _getFuzzedInterval(
+              _nextInterval(stability: stabilityFor(Rating.easy)),
+              elapsedDays,
+            );
+            final goodMax = math.max(
+              goodInterval,
+              math.min(hardInterval, goodInterval) + 1,
+            );
+            nextInterval = Duration(days: math.max(easyInterval, goodMax + 1));
         }
 
       case State.relearning:
+        // A card constructed directly in the relearning state has no step;
+        // default it like the learning path does (the Card constructor only
+        // defaults step for learning).
+        card.step ??= 0;
+
         // update the card's stability and difficulty
         if (daysSinceLastReview != null && daysSinceLastReview < 1) {
           card.stability = _shortTermStability(
@@ -749,15 +931,18 @@ class Scheduler {
         }
 
         // calculate the card's next interval
-        // first if-clause handles edge case where the Card in the Relearning state was previously
-        // scheduled with a Scheduler with more relearningSteps than the current Scheduler
-        if (relearningSteps.isEmpty ||
-            (card.step! >= relearningSteps.length &&
-                [Rating.hard, Rating.good, Rating.easy].contains(rating))) {
+        // ts-fsrs `BasicLearningStepsStrategy` returns {} (graduating the card
+        // to Review for any grade) when there are no steps or the current step
+        // is exhausted — this also covers cards previously scheduled with a
+        // Scheduler with more relearningSteps than the current one.
+        if (relearningSteps.isEmpty || card.step! >= relearningSteps.length) {
           card.state = State.review;
           card.step = null;
 
-          final nextIntervalDays = _nextInterval(stability: card.stability!);
+          final nextIntervalDays = _getFuzzedInterval(
+            _nextInterval(stability: card.stability!),
+            daysSinceLastReview ?? 0,
+          );
           nextInterval = Duration(days: nextIntervalDays);
         } else {
           switch (rating) {
@@ -766,15 +951,8 @@ class Scheduler {
               nextInterval = relearningSteps[card.step!];
 
             case Rating.hard:
-              // card step stays the same
-
-              if (card.step == 0 && relearningSteps.length == 1) {
-                nextInterval = relearningSteps[0] * 1.5;
-              } else if (card.step == 0 && relearningSteps.length >= 2) {
-                nextInterval = (relearningSteps[0] + relearningSteps[1]) ~/ 2;
-              } else {
-                nextInterval = relearningSteps[card.step!];
-              }
+              // Independent of the current step (see _hardStepInterval).
+              nextInterval = _hardStepInterval(relearningSteps);
 
             case Rating.good:
               if (card.step! + 1 == relearningSteps.length) {
@@ -782,8 +960,10 @@ class Scheduler {
                 card.state = State.review;
                 card.step = null;
 
-                final nextIntervalDays =
-                    _nextInterval(stability: card.stability!);
+                final nextIntervalDays = _getFuzzedInterval(
+                  _nextInterval(stability: card.stability!),
+                  daysSinceLastReview ?? 0,
+                );
                 nextInterval = Duration(days: nextIntervalDays);
               } else {
                 card.step = card.step! + 1;
@@ -794,19 +974,23 @@ class Scheduler {
               card.state = State.review;
               card.step = null;
 
-              final nextIntervalDays =
-                  _nextInterval(stability: card.stability!);
+              final nextIntervalDays = _getFuzzedInterval(
+                _nextInterval(stability: card.stability!),
+                daysSinceLastReview ?? 0,
+              );
               nextInterval = Duration(days: nextIntervalDays);
           }
         }
     }
 
-    if (enableFuzzing && card.state == State.review) {
-      nextInterval = _getFuzzedInterval(nextInterval);
-    }
-
     card.due = reviewDateTime.add(nextInterval);
     card.lastReview = reviewDateTime;
+    card.elapsedDays = daysSinceLastReview ?? 0;
+    card.scheduledDays = nextInterval.inDays;
+    card.reps += 1;
+    if (rating == Rating.again && wasReview) {
+      card.lapses += 1;
+    }
 
     final reviewLog = ReviewLog(
       cardId: card.cardId,
@@ -855,29 +1039,24 @@ class Scheduler {
   }
 
   double _clampStability(double stability) {
-    return math.max(stability, stabilityMin);
+    return math.max(math.min(stability, stabilityMax), stabilityMin);
   }
 
   double _initialStability(Rating rating) {
-    var initialStability = parameters[rating.value - 1];
-
-    initialStability = _clampStability(initialStability);
-
-    return initialStability;
+    // ts-fsrs init_stability(): max(w[g-1], 0.1).
+    return math.max(parameters[rating.value - 1], 0.1);
   }
 
   double _initialDifficulty(Rating rating) {
-    var initialDifficulty =
-        parameters[4] - (math.exp(parameters[5] * (rating.value - 1))) + 1;
-
-    initialDifficulty = _clampDifficulty(initialDifficulty);
-
-    return initialDifficulty;
+    // ts-fsrs init_difficulty(): rounded to 8 decimals, clamped by callers.
+    return _roundTo8(
+        parameters[4] - math.exp(parameters[5] * (rating.value - 1)) + 1);
   }
 
   int _nextInterval({required double stability}) {
-    num nextInterval =
-        (stability / _factor) * (math.pow(desiredRetention, 1 / _decay) - 1);
+    // ts-fsrs `next_interval()`: round(stability * intervalModifier), with a
+    // minimum of 1 day and capped at the maximum interval.
+    num nextInterval = stability * _intervalModifier;
 
     nextInterval = nextInterval.round(); // intervals are full days
 
@@ -892,29 +1071,30 @@ class Scheduler {
 
   double _shortTermStability(
       {required double stability, required Rating rating}) {
-    var shortTermStabilityIncrease =
+    final sinc =
         math.exp(parameters[17] * (rating.value - 3 + parameters[18])) *
             math.pow(stability, -parameters[19]);
 
-    if ([Rating.good, Rating.easy].contains(rating)) {
-      shortTermStabilityIncrease = math.max(shortTermStabilityIncrease, 1.0);
-    }
+    // ts-fsrs next_short_term_stability(): floored at 1.0 for any grade >= Hard.
+    final maskedSinc = rating != Rating.again ? math.max(sinc, 1.0) : sinc;
 
-    var shortTermStability = stability * shortTermStabilityIncrease;
+    final shortTermStability = stability * maskedSinc;
 
-    shortTermStability = _clampStability(shortTermStability);
-
-    return shortTermStability;
+    return _roundTo8(math
+        .max(math.min(shortTermStability, stabilityMax), stabilityMin)
+        .toDouble());
   }
 
   double _nextDifficulty({required double difficulty, required Rating rating}) {
     double _linearDamping(
         {required double deltaDifficulty, required double difficulty}) {
-      return (10.0 - difficulty) * deltaDifficulty / 9.0;
+      // ts-fsrs linear_damping(): roundTo((delta_d * (10 - d)) / 9, 8).
+      return _roundTo8((10.0 - difficulty) * deltaDifficulty / 9.0);
     }
 
     double _meanReversion({required double arg1, required double arg2}) {
-      return parameters[7] * arg1 + (1 - parameters[7]) * arg2;
+      // ts-fsrs mean_reversion(): roundTo(w7 * init + (1 - w7) * current, 8).
+      return _roundTo8(parameters[7] * arg1 + (1 - parameters[7]) * arg2);
     }
 
     final arg1 = _initialDifficulty(Rating.easy);
@@ -964,18 +1144,20 @@ class Scheduler {
     required double stability,
     required double retrievability,
   }) {
-    final nextForgetStabilityLongTermParams = parameters[11] *
+    final longTerm = parameters[11] *
         math.pow(difficulty, -parameters[12]) *
         (math.pow((stability + 1), (parameters[13])) - 1) *
         math.exp((1 - retrievability) * parameters[14]);
 
-    final nextForgetStabilityShortTermParams =
-        stability / math.exp(parameters[17] * parameters[18]);
+    // ts-fsrs next_state() (grade 1):
+    // s_after_fail = roundTo(clamp(longTerm, S_MIN, 36500), 8), then
+    // new_s = clamp(roundTo(s / e^(w17 * w18), 8), S_MIN, s_after_fail).
+    final sAfterFail = _roundTo8(
+        math.max(math.min(longTerm, stabilityMax), stabilityMin).toDouble());
+    final nextSMin =
+        _roundTo8(stability / math.exp(parameters[17] * parameters[18]));
 
-    return math.min(
-      nextForgetStabilityLongTermParams,
-      nextForgetStabilityShortTermParams,
-    );
+    return math.max(math.min(sAfterFail, nextSMin), stabilityMin);
   }
 
   double _nextRecallStability({
@@ -987,7 +1169,7 @@ class Scheduler {
     final hardPenalty = rating == Rating.hard ? parameters[15] : 1.0;
     final easyBonus = rating == Rating.easy ? parameters[16] : 1.0;
 
-    return stability *
+    final nextStability = stability *
         (1 +
             math.exp(parameters[8]) *
                 (11 - difficulty) *
@@ -995,26 +1177,32 @@ class Scheduler {
                 (math.exp((1 - retrievability) * parameters[10]) - 1) *
                 hardPenalty *
                 easyBonus);
+
+    // ts-fsrs next_recall_stability(): roundTo(clamp(..., S_MIN, 36500), 8).
+    return _roundTo8(math
+        .max(math.min(nextStability, stabilityMax), stabilityMin)
+        .toDouble());
   }
 
-  /// Takes the current calculated interval and adds a small amount of random fuzz to it.
-  /// For example, a card that would've been due in 50 days, after fuzzing, might be due in 49, or 51 days.
+  /// Applies the ts-fsrs `apply_fuzz()` to [intervalDays]: a deterministic
+  /// draw from `alea(seed)` (or the configured [math.Random]) within the fuzz
+  /// range, floored. When the interval is longer than the days elapsed since
+  /// the previous review, the lower bound is the day after the previous review.
   ///
   /// Args:
-  ///   - interval: The calculated next interval, before fuzzing.
+  ///   - intervalDays: The calculated next interval, in days, before fuzzing.
+  ///   - elapsedDays: Whole days since the previous review.
   ///
   /// Returns:
-  ///   - The new interval, after fuzzing.
-  Duration _getFuzzedInterval(Duration interval) {
-    final intervalDays = interval.inDays;
-
-    // fuzz is not applied to intervals less than 2.5
-    if (intervalDays < 2.5) {
-      return interval;
+  ///   - The new interval, in days, after fuzzing.
+  int _getFuzzedInterval(int intervalDays, int elapsedDays) {
+    // fuzz is not applied to intervals less than 2.5 days
+    if (!enableFuzzing || intervalDays < 2.5) {
+      return intervalDays;
     }
 
     /// Helper function that computes the possible upper and lower bounds of the interval after fuzzing.
-    (int minIvL, int maxIvL) getFuzzRange(int intervalDays) {
+    (int minIvL, int maxIvL) getFuzzRange(int intervalDays, int elapsedDays) {
       var delta = 1.0;
       for (final fuzzRange in fuzzRanges) {
         delta += fuzzRange['factor']! *
@@ -1024,28 +1212,31 @@ class Scheduler {
             );
       }
 
-      var minIvL = (intervalDays - delta).round().toInt();
-      var maxIvL = (intervalDays + delta).round().toInt();
+      final ivl = math.min(intervalDays, maximumInterval);
+      var minIvL = math.max(2, (ivl - delta).round());
+      final maxIvL = math.min((ivl + delta).round(), maximumInterval);
 
       // make sure the minIvL and maxIvL fall into a valid range
-      minIvL = math.max(2, minIvL);
-      maxIvL = math.min(maxIvL, maximumInterval);
+      if (ivl > elapsedDays) {
+        minIvL = math.max(minIvL, elapsedDays + 1);
+      }
       minIvL = math.min(minIvL, maxIvL);
 
       return (minIvL, maxIvL);
     }
 
-    final (minIvL, maxIvL) = getFuzzRange(intervalDays);
+    final (minIvL, maxIvL) = getFuzzRange(intervalDays, elapsedDays);
 
-    num fuzzedIntervalDays = (_fuzzRandom.nextDouble() *
-            (maxIvL - minIvL + 1)) +
-        minIvL; // the next interval is a random value between minIvL and maxIvL
+    // ts-fsrs `apply_fuzz()` re-seeds alea(seed) on every call, so all
+    // intervals computed within one review share the same fuzz factor.
+    final fuzzFactor = _fuzzRandom != null
+        ? _fuzzRandom!.nextDouble()
+        : _Alea(_fuzzSeed!).next();
 
-    fuzzedIntervalDays = math.min(fuzzedIntervalDays.round(), maximumInterval);
+    final fuzzedIntervalDays =
+        (fuzzFactor * (maxIvL - minIvL + 1) + minIvL).floor();
 
-    final fuzzedInterval = Duration(days: fuzzedIntervalDays.toInt());
-
-    return fuzzedInterval;
+    return fuzzedIntervalDays;
   }
 }
 
@@ -1059,4 +1250,100 @@ bool _listEquals<T>(List<T> a, List<T> b) {
     if (a[i] != b[i]) return false;
   }
   return true;
+}
+
+/// Rounds to 8 decimal places, matching ts-fsrs `roundTo(x, 8)`.
+double _roundTo8(double value) => (value * 1e8).roundToDouble() / 1e8;
+
+/// Whole calendar days from [from] to [to] computed in UTC, matching ts-fsrs
+/// `dateDiffInDays()` (Math.floor of the UTC day difference).
+int _daysBetween(DateTime from, DateTime to) {
+  final fromUtc = DateTime.utc(from.year, from.month, from.day);
+  final toUtc = DateTime.utc(to.year, to.month, to.day);
+  final diffMs = toUtc.difference(fromUtc).inMilliseconds;
+  return (diffMs / Duration.millisecondsPerDay).floor();
+}
+
+/// ts-fsrs Hard interval for a learning/relearning step: round(first * 1.5)
+/// with one step, else round((first + second) / 2), rounded to whole minutes.
+/// Computed in fractional minutes (via microseconds) so sub-minute steps keep
+/// their precision instead of truncating to 0 as `Duration.inMinutes` would.
+Duration _hardStepInterval(List<Duration> steps) {
+  double minutes(Duration d) =>
+      d.inMicroseconds / Duration.microsecondsPerMinute;
+  final m = steps.length == 1
+      ? minutes(steps[0]) * 1.5
+      : (minutes(steps[0]) + minutes(steps[1])) / 2;
+  return Duration(minutes: m.round());
+}
+
+/// JavaScript-compatible unsigned 32-bit truncation (`x >>> 0`).
+double _toUint32(double value) => (value.truncate() % 4294967296).toDouble();
+
+/// JavaScript-compatible signed 32-bit truncation (`x | 0`).
+double _toInt32(double value) {
+  final unsigned = value.truncate() % 4294967296;
+  return unsigned >= 2147483648
+      ? (unsigned - 4294967296).toDouble()
+      : unsigned.toDouble();
+}
+
+/// Port of the `Mash` closure from ts-fsrs `alea.ts`.
+class _Mash {
+  double _n = 0xefc8249d;
+
+  /// Returns a float in [0, 1), mutating [_n] like the JavaScript original.
+  double mash(String data) {
+    for (var i = 0; i < data.length; i++) {
+      _n += data.codeUnitAt(i).toDouble();
+      var h = 0.02519603282416938 * _n;
+      _n = _toUint32(h);
+      h -= _n;
+      h *= _n;
+      _n = _toUint32(h);
+      h -= _n;
+      _n += h * 0x100000000; // 2^32
+    }
+    return _toUint32(_n) * 2.3283064365386963e-10; // 2^-32
+  }
+}
+
+/// Port of the `Alea` PRNG from ts-fsrs `alea.ts`.
+class _Alea {
+  late double _c;
+  late double _s0;
+  late double _s1;
+  late double _s2;
+
+  _Alea(String seed) {
+    final mash = _Mash();
+    _c = 1;
+    _s0 = mash.mash(' ');
+    _s1 = mash.mash(' ');
+    _s2 = mash.mash(' ');
+    _s0 -= mash.mash(seed);
+    if (_s0 < 0) _s0 += 1;
+    _s1 -= mash.mash(seed);
+    if (_s1 < 0) _s1 += 1;
+    _s2 -= mash.mash(seed);
+    if (_s2 < 0) _s2 += 1;
+  }
+
+  double next() {
+    final t = 2091639 * _s0 + _c * 2.3283064365386963e-10; // 2^-32
+    _s0 = _s1;
+    _s1 = _s2;
+    _c = _toInt32(t);
+    _s2 = t - _c;
+    return _s2;
+  }
+}
+
+/// Formats [value] like JavaScript's `String(number)`: integer-valued doubles
+/// (including `-0.0`) print without a trailing `.0`.
+String _jsNumberString(double value) {
+  if (value == value.truncateToDouble()) {
+    return value.truncate().toString();
+  }
+  return value.toString();
 }
