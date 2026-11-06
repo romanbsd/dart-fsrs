@@ -7,7 +7,8 @@ import 'package:fsrs/fsrs.dart'; // Assuming the ported library is in this packa
 void main() {
   group('TestDartFSRS', () {
     test('test_review_card', () async {
-      final scheduler = Scheduler(enableFuzzing: false);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, enableFuzzing: false);
 
       const ratings = [
         Rating.good,
@@ -41,23 +42,24 @@ void main() {
 
       expect(ivlHistory, [
         0,
-        4,
-        14,
-        45,
-        135,
-        372,
+        2,
+        11,
+        46,
+        163,
+        498,
         0,
         0,
         2,
-        5,
-        10,
-        20,
-        40,
+        4,
+        7,
+        12,
+        21,
       ]);
     });
 
     test('test_repeated_correct_reviews', () async {
-      final scheduler = Scheduler(enableFuzzing: false);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, enableFuzzing: false);
 
       var card = await Card.create();
       final reviewDateTimes = [
@@ -73,7 +75,9 @@ void main() {
     });
 
     test('test_memo_state', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
 
       const ratings = [
         Rating.again,
@@ -100,12 +104,14 @@ void main() {
       (card: card, reviewLog: _) = scheduler.reviewCard(card, Rating.good,
           reviewDateTime: reviewDateTime);
 
-      expect(card.stability, closeTo(49.4472, 0.0001));
-      expect(card.difficulty, closeTo(6.8271, 0.0001));
+      expect(card.stability, closeTo(53.62690465, 1e-6));
+      expect(card.difficulty, closeTo(6.34635796, 1e-6));
     });
 
     test('test_repeat_default_arg', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
       const rating = Rating.good;
 
@@ -119,7 +125,9 @@ void main() {
     });
 
     test('test_datetime', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
 
       // new cards should be due immediately after creation
@@ -156,7 +164,9 @@ void main() {
     });
 
     test('test_Card_serialize', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
 
       // create card object the normal way
       var card = await Card.create();
@@ -190,7 +200,9 @@ void main() {
     });
 
     test('test_ReviewLog_serialize', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
 
       // review a card to get the review_log
@@ -228,6 +240,7 @@ void main() {
 
     test('test_custom_scheduler_args', () async {
       final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
         desiredRetention: 0.9,
         maximumInterval: 36500,
         enableFuzzing: false,
@@ -262,18 +275,18 @@ void main() {
 
       expect(ivlHistory, [
         0,
-        4,
-        14,
-        45,
-        135,
-        372,
+        2,
+        11,
+        46,
+        163,
+        498,
         0,
         0,
         2,
-        5,
-        10,
-        20,
-        40,
+        4,
+        7,
+        12,
+        21,
       ]);
 
       // initialize another scheduler and verify parameters are properly set
@@ -303,6 +316,7 @@ void main() {
       const desiredRetention2 = 0.85;
       const maximumInterval2 = 3650;
       final scheduler2 = Scheduler(
+        version: FSRSVersion.fsrs6,
         parameters: parameters2,
         desiredRetention: desiredRetention2,
         maximumInterval: maximumInterval2,
@@ -314,7 +328,9 @@ void main() {
     });
 
     test('test_retrievability', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
 
       // retrievabiliy of New card
@@ -346,7 +362,9 @@ void main() {
     });
 
     test('test_Scheduler_serialize', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
 
       // Scheduler objects are json-serializable through its .toMap() method
       expect(json.encode(scheduler.toMap()), isA<String>());
@@ -359,7 +377,9 @@ void main() {
     });
 
     test('test_good_learning_steps', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       final createdAt = DateTime.now().toUtc();
       var card = await Card.create();
 
@@ -383,7 +403,9 @@ void main() {
     });
 
     test('test_again_learning_steps', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       final createdAt = DateTime.now().toUtc();
       var card = await Card.create();
 
@@ -400,7 +422,9 @@ void main() {
     });
 
     test('test_hard_learning_steps', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       final createdAt = DateTime.now().toUtc();
       var card = await Card.create();
 
@@ -413,11 +437,13 @@ void main() {
       expect(card.state, State.learning);
       expect(card.step, 0);
       expect((card.due.difference(createdAt).inSeconds / 10).round(),
-          33); // card is due in approx. 5.5 minutes (330 seconds)
+          36); // card is due in approx. 6 minutes (360 seconds)
     });
 
     test('test_easy_learning_steps', () async {
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       final createdAt = DateTime.now().toUtc();
       var card = await Card.create();
 
@@ -434,7 +460,8 @@ void main() {
     });
 
     test('test_review_state', () async {
-      final scheduler = Scheduler(enableFuzzing: false);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, enableFuzzing: false);
       var card = await Card.create();
 
       (card: card, reviewLog: _) =
@@ -465,7 +492,8 @@ void main() {
     });
 
     test('test_relearning', () async {
-      final scheduler = Scheduler(enableFuzzing: false);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, enableFuzzing: false);
       var card = await Card.create();
 
       (card: card, reviewLog: _) =
@@ -512,7 +540,8 @@ void main() {
       // The goal is to verify that fuzzing introduces variability.
 
       // seed 1
-      var scheduler = Scheduler.customRandom(Random(42));
+      var scheduler = Scheduler.customRandom(Random(42),
+          version: FSRSVersion.fsrs6, enableFuzzing: true);
       var card = await Card.create();
       (card: card, reviewLog: _) = scheduler.reviewCard(card, Rating.good,
           reviewDateTime: DateTime.now().toUtc());
@@ -523,10 +552,11 @@ void main() {
           scheduler.reviewCard(card, Rating.good, reviewDateTime: card.due);
       var interval = card.due.difference(prevDue);
 
-      expect(interval.inDays, 13);
+      expect(interval.inDays, 12);
 
       // seed 2
-      scheduler = Scheduler.customRandom(Random(12345));
+      scheduler = Scheduler.customRandom(Random(12345),
+          version: FSRSVersion.fsrs6, enableFuzzing: true);
       card = await Card.create();
       (card: card, reviewLog: _) = scheduler.reviewCard(card, Rating.good,
           reviewDateTime: DateTime.now().toUtc());
@@ -542,11 +572,12 @@ void main() {
       // the expected value may not match exactly.
       // expect(interval.inDays, 12);
       // Adjusting the expected value based on the Dart random behavior.
-      expect(interval.inDays, 21);
+      expect(interval.inDays, 13);
     });
 
     test('test_no_learning_steps', () async {
-      final scheduler = Scheduler(learningSteps: []);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, learningSteps: []);
 
       expect(scheduler.learningSteps, isEmpty);
 
@@ -560,7 +591,8 @@ void main() {
     });
 
     test('test_no_relearning_steps', () async {
-      final scheduler = Scheduler(relearningSteps: []);
+      final scheduler =
+          Scheduler(version: FSRSVersion.fsrs6, relearningSteps: []);
 
       expect(scheduler.relearningSteps, isEmpty);
 
@@ -583,17 +615,22 @@ void main() {
 
     test('test_one_card_multiple_schedulers', () async {
       final schedulerWithTwoLearningSteps = Scheduler(
+          version: FSRSVersion.fsrs6,
           learningSteps: const [Duration(minutes: 1), Duration(minutes: 10)]);
-      final schedulerWithOneLearningStep =
-          Scheduler(learningSteps: const [Duration(minutes: 1)]);
-      final schedulerWithNoLearningSteps = Scheduler(learningSteps: const []);
+      final schedulerWithOneLearningStep = Scheduler(
+          version: FSRSVersion.fsrs6,
+          learningSteps: const [Duration(minutes: 1)]);
+      final schedulerWithNoLearningSteps =
+          Scheduler(version: FSRSVersion.fsrs6, learningSteps: const []);
 
       final schedulerWithTwoRelearningSteps = Scheduler(
+          version: FSRSVersion.fsrs6,
           relearningSteps: const [Duration(minutes: 1), Duration(minutes: 10)]);
-      final schedulerWithOneRelearningStep =
-          Scheduler(relearningSteps: const [Duration(minutes: 1)]);
+      final schedulerWithOneRelearningStep = Scheduler(
+          version: FSRSVersion.fsrs6,
+          relearningSteps: const [Duration(minutes: 1)]);
       final schedulerWithNoRelearningSteps =
-          Scheduler(relearningSteps: const []);
+          Scheduler(version: FSRSVersion.fsrs6, relearningSteps: const []);
 
       var card = await Card.create();
 
@@ -609,8 +646,10 @@ void main() {
       (card: card, reviewLog: _) = schedulerWithOneLearningStep.reviewCard(
           card, Rating.again,
           reviewDateTime: DateTime.now().toUtc());
-      expect(card.state, State.learning);
-      expect(card.step, 0);
+      // the card was at step 1 and this scheduler has a single step, so any
+      // grade graduates it to the Review state (ts-fsrs step-strategy ({}))
+      expect(card.state, State.review);
+      expect(card.step, isNull);
 
       expect(schedulerWithNoLearningSteps.learningSteps.length, 0);
       (card: card, reviewLog: _) = schedulerWithNoLearningSteps.reviewCard(
@@ -637,8 +676,11 @@ void main() {
       (card: card, reviewLog: _) = schedulerWithOneRelearningStep.reviewCard(
           card, Rating.again,
           reviewDateTime: DateTime.now().toUtc());
-      expect(card.state, State.relearning);
-      expect(card.step, 0);
+      // the card was at relearning step 1 and this scheduler has a single
+      // step, so any grade graduates it to the Review state (ts-fsrs
+      // step-strategy ({}))
+      expect(card.state, State.review);
+      expect(card.step, isNull);
 
       expect(schedulerWithNoRelearningSteps.relearningSteps.length, 0);
       (card: card, reviewLog: _) = schedulerWithNoRelearningSteps.reviewCard(
@@ -650,29 +692,31 @@ void main() {
 
     test('test_maximum_interval', () async {
       const maximumInterval = 100;
-      final scheduler = Scheduler(maximumInterval: maximumInterval);
+      final scheduler = Scheduler(
+          version: FSRSVersion.fsrs6, maximumInterval: maximumInterval);
 
+      // The interval cap is applied inside `next_interval`, but the review
+      // interlock (hard <= good <= easy, each at least one day longer) can
+      // then push the final interval past the cap by up to 2 days — ts-fsrs
+      // produces exactly [8, 39, 102, 101] for this Easy/Good/Easy/Good
+      // sequence with maximum_interval=100.
       var card = await Card.create();
 
       (card: card, reviewLog: _) =
           scheduler.reviewCard(card, Rating.easy, reviewDateTime: card.due);
-      expect(card.due.difference(card.lastReview!).inDays,
-          lessThanOrEqualTo(scheduler.maximumInterval));
+      expect(card.due.difference(card.lastReview!).inDays, 8);
 
       (card: card, reviewLog: _) =
           scheduler.reviewCard(card, Rating.good, reviewDateTime: card.due);
-      expect(card.due.difference(card.lastReview!).inDays,
-          lessThanOrEqualTo(scheduler.maximumInterval));
+      expect(card.due.difference(card.lastReview!).inDays, 39);
 
       (card: card, reviewLog: _) =
           scheduler.reviewCard(card, Rating.easy, reviewDateTime: card.due);
-      expect(card.due.difference(card.lastReview!).inDays,
-          lessThanOrEqualTo(scheduler.maximumInterval));
+      expect(card.due.difference(card.lastReview!).inDays, 102);
 
       (card: card, reviewLog: _) =
           scheduler.reviewCard(card, Rating.good, reviewDateTime: card.due);
-      expect(card.due.difference(card.lastReview!).inDays,
-          lessThanOrEqualTo(scheduler.maximumInterval));
+      expect(card.due.difference(card.lastReview!).inDays, 101);
     });
 
     test('test_class_repr', () async {
@@ -680,7 +724,9 @@ void main() {
       var card = await Card.create();
       expect(card.toString(), isNotEmpty);
 
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       expect(scheduler.toString(), isNotEmpty);
 
       late final ReviewLog reviewLog;
@@ -701,7 +747,9 @@ void main() {
 
     test('test_stability_lower_bound', () async {
       /// Ensure that a Card object's stability is always >= stabilityMin
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
 
       for (var i = 0; i < 1000; i++) {
@@ -717,41 +765,58 @@ void main() {
 
     test('test_scheduler_parameter_validation', () async {
       // initializing a Scheduler object with valid parameters works
-      final goodParameters = defaultParameters;
-      expect(Scheduler(parameters: goodParameters), isA<Scheduler>());
+      final goodParameters = fsrs6DefaultParameters;
+      expect(Scheduler(version: FSRSVersion.fsrs6, parameters: goodParameters),
+          isA<Scheduler>());
 
-      final parametersOneTooHigh = List<double>.from(defaultParameters);
+      final parametersOneTooHigh = List<double>.from(fsrs6DefaultParameters);
       parametersOneTooHigh[6] = 100;
-      expect(() => Scheduler(parameters: parametersOneTooHigh),
+      expect(
+          () => Scheduler(
+              version: FSRSVersion.fsrs6, parameters: parametersOneTooHigh),
           throwsArgumentError);
 
-      final parametersOneTooLow = List<double>.from(defaultParameters);
+      final parametersOneTooLow = List<double>.from(fsrs6DefaultParameters);
       parametersOneTooLow[10] = -42;
-      expect(() => Scheduler(parameters: parametersOneTooLow),
+      expect(
+          () => Scheduler(
+              version: FSRSVersion.fsrs6, parameters: parametersOneTooLow),
           throwsArgumentError);
 
-      final parametersTwoBad = List<double>.from(defaultParameters);
+      final parametersTwoBad = List<double>.from(fsrs6DefaultParameters);
       parametersTwoBad[0] = 0;
       parametersTwoBad[3] = 101;
       expect(
-          () => Scheduler(parameters: parametersTwoBad), throwsArgumentError);
-
-      final zeroParameters = <double>[];
-      expect(() => Scheduler(parameters: zeroParameters), throwsArgumentError);
-
-      final oneTooFewParameters =
-          defaultParameters.sublist(0, defaultParameters.length - 1);
-      expect(() => Scheduler(parameters: oneTooFewParameters),
+          () => Scheduler(
+              version: FSRSVersion.fsrs6, parameters: parametersTwoBad),
           throwsArgumentError);
 
-      final tooManyParameters = [...defaultParameters, 1.0, 2.0, 3.0];
+      final zeroParameters = <double>[];
       expect(
-          () => Scheduler(parameters: tooManyParameters), throwsArgumentError);
+          () =>
+              Scheduler(version: FSRSVersion.fsrs6, parameters: zeroParameters),
+          throwsArgumentError);
+
+      final oneTooFewParameters =
+          fsrs6DefaultParameters.sublist(0, fsrs6DefaultParameters.length - 1);
+      expect(
+          () => Scheduler(
+              version: FSRSVersion.fsrs6, parameters: oneTooFewParameters),
+          throwsArgumentError);
+
+      final tooManyParameters = [...fsrs6DefaultParameters, 1.0, 2.0, 3.0];
+      expect(
+          () => Scheduler(
+              version: FSRSVersion.fsrs6, parameters: tooManyParameters),
+          throwsArgumentError);
     });
 
     test('test_class_eq_methods', () async {
-      final scheduler1 = Scheduler();
-      final scheduler2 = Scheduler(desiredRetention: 0.91);
+      final scheduler1 = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
+      final scheduler2 =
+          Scheduler(version: FSRSVersion.fsrs6, desiredRetention: 0.91);
       final scheduler1Copy = Scheduler.fromMap(scheduler1.toMap());
 
       expect(scheduler1, isNot(equals(scheduler2)));
@@ -781,6 +846,7 @@ void main() {
       const firstLearningStep = Duration(minutes: 10);
 
       final schedulerWithOneLearningStep = Scheduler(
+        version: FSRSVersion.fsrs6,
         learningSteps: const [firstLearningStep],
       );
 
@@ -813,6 +879,7 @@ void main() {
       const secondLearningStep = Duration(minutes: 10);
 
       final schedulerWithTwoLearningSteps = Scheduler(
+        version: FSRSVersion.fsrs6,
         learningSteps: const [firstLearningStep, secondLearningStep],
       );
 
@@ -846,7 +913,7 @@ void main() {
       final intervalLength =
           dueDatetimeAfterSecondReview.difference(dueDatetimeAfterFirstReview);
 
-      const expectedIntervalLength = secondLearningStep;
+      const expectedIntervalLength = Duration(minutes: 6);
 
       const tolerance = Duration(seconds: 1);
 
@@ -859,7 +926,9 @@ void main() {
       // the unit tests cover the case when a card in the relearning state
       // is not reviewed on the same day to run the non-same-day stability calculations
 
-      final scheduler = Scheduler();
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
       var card = await Card.create();
 
       expect(card.state, State.learning);
@@ -899,6 +968,7 @@ void main() {
       const firstRelearningStep = Duration(minutes: 10);
 
       final schedulerWithOneRelearningStep = Scheduler(
+        version: FSRSVersion.fsrs6,
         relearningSteps: const [firstRelearningStep],
       );
 
@@ -949,6 +1019,7 @@ void main() {
       const secondRelearningStep = Duration(minutes: 10);
 
       final schedulerWithTwoRelearningSteps = Scheduler(
+        version: FSRSVersion.fsrs6,
         relearningSteps: const [firstRelearningStep, secondRelearningStep],
       );
 
@@ -986,8 +1057,7 @@ void main() {
 
       var intervalLength = newDueDatetime.difference(prevDueDatetime);
 
-      var expectedIntervalLength =
-          (firstRelearningStep + secondRelearningStep) ~/ 2;
+      var expectedIntervalLength = Duration(minutes: 6);
 
       var tolerance = Duration(seconds: 1);
 
@@ -1018,7 +1088,7 @@ void main() {
 
       intervalLength = newDueDatetime.difference(prevDueDatetime);
 
-      expectedIntervalLength = secondRelearningStep;
+      expectedIntervalLength = Duration(minutes: 6);
 
       tolerance = const Duration(seconds: 1);
 
@@ -1033,6 +1103,59 @@ void main() {
 
       expect(card.state, State.review);
       expect(card.step, isNull);
+    });
+
+    test('test_migrate_fsrsv5_parameters_does_not_throw', () {
+      // 19 FSRSv5 weights migrate to 21; the appended w[19]=0.0 must be
+      // clamped into bounds (lower 0.01) instead of failing validation.
+      final v5 = fsrs6DefaultParameters.sublist(0, 19);
+      final scheduler = Scheduler(version: FSRSVersion.fsrs6, parameters: v5);
+      expect(scheduler.parameters.length, 21);
+      expect(scheduler.parameters[19], greaterThanOrEqualTo(0.01));
+    });
+
+    test('test_sub_minute_hard_step_not_truncated', () async {
+      // [30s, 1m] Hard = round((0.5 + 1) / 2) = round(0.75) = 1 minute.
+      // Truncating each step to whole minutes first would give 0.
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+        learningSteps: const [Duration(seconds: 30), Duration(minutes: 1)],
+      );
+      var card = await Card.create();
+      final t0 = card.due;
+      (card: card, reviewLog: _) =
+          scheduler.reviewCard(card, Rating.hard, reviewDateTime: t0);
+      expect(card.due.difference(t0), const Duration(minutes: 1));
+    });
+
+    test('test_get_retrievability_rejects_non_utc', () async {
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
+      final card = await Card.create();
+      expect(
+        () => scheduler.getCardRetrievability(card,
+            currentDateTime: DateTime(2026, 1, 1)),
+        throwsArgumentError,
+      );
+    });
+
+    test('test_relearning_card_without_step_does_not_crash', () {
+      // A card constructed directly in the relearning state has a null step;
+      // reviewCard must default it instead of throwing on card.step!.
+      final scheduler = Scheduler(
+        version: FSRSVersion.fsrs6,
+      );
+      final card = Card(
+        cardId: 1,
+        state: State.relearning,
+        stability: 10.0,
+        difficulty: 5.0,
+      );
+      expect(card.step, isNull);
+      final result =
+          scheduler.reviewCard(card, Rating.good, reviewDateTime: card.due);
+      expect(result.card.state, isNotNull);
     });
   });
 }

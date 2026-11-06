@@ -1,31 +1,10 @@
 import 'package:fsrs/fsrs.dart';
 
 void main() async {
-  // note: the following arguments are also the defaults
+  // FSRS-7 (default): 34 weights, dual-trace memory, fractional elapsed days.
+  // The arguments below are the FSRS-7 defaults; `enableFuzzing` is shown
+  // enabled for illustration (the default is false).
   var scheduler = Scheduler(
-    parameters: [
-      0.2172,
-      1.1771,
-      3.2602,
-      16.1507,
-      7.0114,
-      0.57,
-      2.0966,
-      0.0069,
-      1.5261,
-      0.112,
-      1.0178,
-      1.849,
-      0.1133,
-      0.3127,
-      2.2934,
-      0.2191,
-      3.0004,
-      0.7536,
-      0.3332,
-      0.1437,
-      0.2,
-    ],
     desiredRetention: 0.9,
     learningSteps: [
       Duration(minutes: 1),
@@ -37,6 +16,9 @@ void main() async {
     maximumInterval: 36500,
     enableFuzzing: true,
   );
+
+  // FSRS-6 (legacy, frozen at ts-fsrs 5.4.2 parity) with its 21 weights:
+  // final legacy = Scheduler(version: FSRSVersion.fsrs6);
 
   final cardInitial = await Card.create();
 

@@ -12,6 +12,10 @@
 # The core lints are also what is used by pub.dev for scoring packages.
 
 include: package:lints/recommended.yaml
+
+formatter:
+  page_width: 120
+
 analyzer:
   errors:
     no_leading_underscores_for_local_identifiers: ignore

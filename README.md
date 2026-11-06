@@ -35,7 +35,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  fsrs: ^2.0.0
+  fsrs: ^3.0.0
 ```
 
 and then run:
@@ -102,36 +102,30 @@ print("Card due in ${timeDelta.inSeconds} seconds");
 
 ## Usage
 
+### Choosing an FSRS version
+
+`Scheduler` supports both model versions:
+
+```dart
+// FSRS-7 (default): 34 weights, dual-trace fast/slow memory,
+// fractional elapsed days, learning steps with model override.
+var scheduler = Scheduler();
+
+// FSRS-6: legacy21-weight model, frozen at ts-fsrs 5.4.2 parity.
+var legacy = Scheduler(version: FSRSVersion.fsrs6);
+```
+
+`Scheduler.fromMap` infers the version from the weight count (34 → FSRS-7,
+21 → FSRS-6) when the stored map has no `version` key.
+
 ### Custom parameters
 
 You can initialize the FSRS scheduler with your own custom parameters.
 
 ```dart
-// note: the following arguments are also the defaults
+// note: these are the FSRS-7 defaults
 scheduler = Scheduler(
-  parameters: [
-    0.2172,
-    1.1771,
-    3.2602,
-    16.1507,
-    7.0114,
-    0.57,
-    2.0966,
-    0.0069,
-    1.5261,
-    0.112,
-    1.0178,
-    1.849,
-    0.1133,
-    0.3127,
-    2.2934,
-    0.2191,
-    3.0004,
-    0.7536,
-    0.3332,
-    0.1437,
-    0.2,
-  ],
+  parameters: fsrs7DefaultParameters,
   desiredRetention: 0.9,
   learningSteps: [
     Duration(minutes: 1),
@@ -147,7 +141,7 @@ scheduler = Scheduler(
 
 #### Explanation of parameters
 
-`parameters` are a set of 21 model weights that affect how the FSRS scheduler will schedule future reviews. If you're not familiar with optimizing FSRS, it is best not to modify these default values.
+`parameters` are the model weights that affect how the FSRS scheduler will schedule future reviews: 34 weights for FSRS-7 (`fsrs7DefaultParameters`) and 21 for FSRS-6 (`fsrs6DefaultParameters`). FSRS-7 weights are validated by length and silently clipped into the model bounds (including the cross-parameter monotonicity constraints); FSRS-6 weights must already lie within their bounds. If you're not familiar with optimizing FSRS, it is best not to modify these default values.
 
 `desired_retention` is a value between 0 and 1 that sets the desired minimum retention rate for cards when scheduled with the scheduler. For example, with the default value of `desired_retention=0.9`, a card will be scheduled at a time in the future when the predicted probability of the user correctly recalling that card falls to 90%. A higher `desired_retention` rate will lead to more reviews and a lower rate will lead to fewer reviews.
 
